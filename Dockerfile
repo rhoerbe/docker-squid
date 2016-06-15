@@ -1,22 +1,20 @@
-FROM sameersbn/ubuntu:14.04.20160608
-MAINTAINER sameer@damagehead.com
+FROM centos:centos7
+MAINTAINER r2h2 <rhoerbe@hoerbe.at>
 
-ENV SQUID_VERSION=3.3.8 \
-    SQUID_CACHE_DIR=/var/spool/squid3 \
-    SQUID_LOG_DIR=/var/log/squid3 \
-    SQUID_USER=proxy
+RUN yum -y install curl git gcc gcc-c++ ip lsof net-tools openssl wget which \
+RUN yum -y install squid \
+ && yum clean all
 
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 80F70E11F0F0D5F10CB20E62F5DA5F09C3173AA6 \
- && echo "deb http://ppa.launchpad.net/brightbox/squid-ssl/ubuntu trusty main" >> /etc/apt/sources.list \
- && apt-get update \
- && DEBIAN_FRONTEND=noninteractive apt-get install -y squid3-ssl=${SQUID_VERSION}* \
- && mv /etc/squid3/squid.conf /etc/squid3/squid.conf.dist \
- && rm -rf /var/lib/apt/lists/*
+ARG USERNAME=proxy
+ARG UID=1001
+RUN groupadd --gid $UID $USERNAME \
+ && useradd --gid $UID --uid $UID $USERNAME \
+ && chown -R $USERNAME:$USERNAME /opt \
+ && chgrp -R $USERNAME /etc/squid/*.conf
 
-COPY squid.conf /etc/squid3/squid.conf
-COPY entrypoint.sh /sbin/entrypoint.sh
-RUN chmod 755 /sbin/entrypoint.sh
 
+COPY /install/scripts/start.sh /start.sh
+RUN chmod a+x /start.sh
 EXPOSE 3128/tcp
-VOLUME ["${SQUID_CACHE_DIR}"]
-ENTRYPOINT ["/sbin/entrypoint.sh"]
+CMD ["/start.sh"]
+
